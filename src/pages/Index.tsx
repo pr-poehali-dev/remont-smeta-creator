@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from '@/components/ui/separator';
 
 interface WorkItem {
   id: string;
@@ -31,6 +32,8 @@ interface Estimate {
   items: WorkItem[];
   totalAmount: number;
   paidAmount: number;
+  contractId?: string;
+  additionalWorks: WorkItem[];
 }
 
 interface Act {
@@ -46,9 +49,47 @@ interface Act {
   totalAmount: number;
 }
 
+interface Contract {
+  id: string;
+  number: string;
+  estimateId: string;
+  estimateNumber: string;
+  client: string;
+  object: string;
+  date: string;
+  signDate?: string;
+  status: 'draft' | 'signed' | 'active' | 'completed';
+  totalAmount: number;
+  terms: string;
+}
+
+interface Contractor {
+  id: string;
+  name: string;
+  inn: string;
+  phone: string;
+  email: string;
+  type: 'individual' | 'legal';
+  projects: number;
+  totalAmount: number;
+}
+
+interface Payment {
+  id: string;
+  date: string;
+  estimateId: string;
+  estimateNumber: string;
+  client: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  description: string;
+}
+
 const Index = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
+  
   const [estimates, setEstimates] = useState<Estimate[]>([
     {
       id: '1',
@@ -60,6 +101,8 @@ const Index = () => {
       items: [],
       totalAmount: 850000,
       paidAmount: 340000,
+      contractId: 'c1',
+      additionalWorks: []
     },
     {
       id: '2',
@@ -71,6 +114,7 @@ const Index = () => {
       items: [],
       totalAmount: 420000,
       paidAmount: 420000,
+      additionalWorks: []
     },
     {
       id: '3',
@@ -82,24 +126,10 @@ const Index = () => {
       items: [],
       totalAmount: 650000,
       paidAmount: 0,
+      additionalWorks: []
     },
   ]);
 
-  const [workDirectory] = useState<WorkItem[]>([
-    { id: 'w1', name: 'Демонтаж стен', unit: 'м²', quantity: 1, price: 450, category: 'work' },
-    { id: 'w2', name: 'Штукатурка стен', unit: 'м²', quantity: 1, price: 650, category: 'work' },
-    { id: 'w3', name: 'Укладка плитки', unit: 'м²', quantity: 1, price: 1200, category: 'work' },
-    { id: 'w4', name: 'Монтаж гипсокартона', unit: 'м²', quantity: 1, price: 550, category: 'work' },
-    { id: 'm1', name: 'Цемент М500', unit: 'кг', quantity: 1, price: 12, category: 'material' },
-    { id: 'm2', name: 'Плитка керамическая', unit: 'м²', quantity: 1, price: 890, category: 'material' },
-    { id: 'm3', name: 'Гипсокартон ГКЛ', unit: 'лист', quantity: 1, price: 350, category: 'material' },
-  ]);
-
-  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
-  const [estimateItems, setEstimateItems] = useState<WorkItem[]>([]);
-  const [isCreateActDialogOpen, setIsCreateActDialogOpen] = useState(false);
   const [acts, setActs] = useState<Act[]>([
     {
       id: 'a1',
@@ -118,16 +148,60 @@ const Index = () => {
     }
   ]);
 
+  const [contracts, setContracts] = useState<Contract[]>([
+    {
+      id: 'c1',
+      number: 'ДОГ-2024-001',
+      estimateId: '1',
+      estimateNumber: 'СМ-2024-001',
+      client: 'ООО "Строй-Инвест"',
+      object: 'ул. Ленина, 45, кв. 12',
+      date: '2024-10-15',
+      signDate: '2024-10-16',
+      status: 'active',
+      totalAmount: 850000,
+      terms: 'Ремонт квартиры по утвержденной смете. Срок выполнения: 60 дней.'
+    }
+  ]);
+
+  const [contractors, setContractors] = useState<Contractor[]>([
+    { id: 'ct1', name: 'ООО "Строй-Инвест"', inn: '7701234567', phone: '+7 (495) 123-45-67', email: 'info@stroyinvest.ru', type: 'legal', projects: 3, totalAmount: 1250000 },
+    { id: 'ct2', name: 'Иванов Иван Иванович', inn: '770198765432', phone: '+7 (926) 555-12-34', email: 'ivanov@mail.ru', type: 'individual', projects: 1, totalAmount: 420000 },
+    { id: 'ct3', name: 'ООО "РемонтСтрой"', inn: '7709876543', phone: '+7 (495) 987-65-43', email: 'contact@remontstroi.ru', type: 'legal', projects: 2, totalAmount: 980000 },
+  ]);
+
+  const [payments, setPayments] = useState<Payment[]>([
+    { id: 'p1', date: '2024-10-16', estimateId: '1', estimateNumber: 'СМ-2024-001', client: 'ООО "Строй-Инвест"', amount: 340000, type: 'income', category: 'Аванс', description: 'Предоплата 40%' },
+    { id: 'p2', date: '2024-10-18', estimateId: '2', estimateNumber: 'СМ-2024-002', client: 'Иванов И.И.', amount: 420000, type: 'income', category: 'Полная оплата', description: 'Оплата по акту' },
+    { id: 'p3', date: '2024-10-19', estimateId: '1', estimateNumber: 'СМ-2024-001', client: 'Поставщик материалов', amount: 85000, type: 'expense', category: 'Материалы', description: 'Закупка материалов для СМ-2024-001' },
+  ]);
+
+  const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [estimateItems, setEstimateItems] = useState<WorkItem[]>([]);
+  const [isCreateActDialogOpen, setIsCreateActDialogOpen] = useState(false);
+  const [isCreateContractDialogOpen, setIsCreateContractDialogOpen] = useState(false);
+  const [isAdditionalWorksDialogOpen, setIsAdditionalWorksDialogOpen] = useState(false);
+  const [isAddContractorDialogOpen, setIsAddContractorDialogOpen] = useState(false);
+  const [isAddPaymentDialogOpen, setIsAddPaymentDialogOpen] = useState(false);
+
   const totalRevenue = estimates.reduce((sum, est) => sum + est.totalAmount, 0);
   const totalPaid = estimates.reduce((sum, est) => sum + est.paidAmount, 0);
   const activeEstimates = estimates.filter(e => e.status === 'active').length;
   const completedEstimates = estimates.filter(e => e.status === 'completed').length;
+
+  const totalIncome = payments.filter(p => p.type === 'income').reduce((sum, p) => sum + p.amount, 0);
+  const totalExpense = payments.filter(p => p.type === 'expense').reduce((sum, p) => sum + p.amount, 0);
+  const profit = totalIncome - totalExpense;
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft': return 'bg-gray-100 text-gray-800 border-gray-300';
       case 'active': return 'bg-blue-100 text-blue-800 border-blue-300';
       case 'completed': return 'bg-green-100 text-green-800 border-green-300';
+      case 'signed': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'paid': return 'bg-green-100 text-green-800 border-green-300';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -137,6 +211,8 @@ const Index = () => {
       case 'draft': return 'Черновик';
       case 'active': return 'В работе';
       case 'completed': return 'Завершен';
+      case 'signed': return 'Подписан';
+      case 'paid': return 'Оплачен';
       default: return status;
     }
   };
@@ -207,22 +283,36 @@ const Index = () => {
     setActiveTab('acts');
   };
 
-  const getActStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800 border-gray-300';
-      case 'signed': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'paid': return 'bg-green-100 text-green-800 border-green-300';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const handleCreateContract = () => {
+    if (!selectedEstimate) return;
+    
+    const newContract: Contract = {
+      id: `c${contracts.length + 1}`,
+      number: `ДОГ-2024-${String(contracts.length + 1).padStart(3, '0')}`,
+      estimateId: selectedEstimate.id,
+      estimateNumber: selectedEstimate.number,
+      client: selectedEstimate.client,
+      object: selectedEstimate.object,
+      date: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      totalAmount: calculateTotal(),
+      terms: 'Ремонт квартиры по утвержденной смете.'
+    };
+    
+    setContracts([...contracts, newContract]);
+    toast({
+      title: "Договор создан",
+      description: `Создан договор ${newContract.number} на сумму ${newContract.totalAmount.toLocaleString('ru-RU')} ₽`,
+    });
+    setIsDetailDialogOpen(false);
+    setActiveTab('contracts');
   };
 
-  const getActStatusText = (status: string) => {
-    switch (status) {
-      case 'draft': return 'Черновик';
-      case 'signed': return 'Подписан';
-      case 'paid': return 'Оплачен';
-      default: return status;
-    }
+  const handleAddAdditionalWork = () => {
+    if (!selectedEstimate) return;
+    
+    setSelectedEstimate(selectedEstimate);
+    setIsAdditionalWorksDialogOpen(true);
   };
 
   return (
@@ -232,11 +322,11 @@ const Index = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <Icon name="Calculator" className="text-white" size={22} />
+                <Icon name="Calculator" size={24} className="text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-900">СметаПро</h1>
-                <p className="text-sm text-slate-500">Управление сметами и актами</p>
+                <h1 className="text-xl font-bold text-slate-900">СметаПро</h1>
+                <p className="text-sm text-slate-600">Управление ремонтными работами</p>
               </div>
             </div>
             <Button className="gap-2">
@@ -249,79 +339,84 @@ const Index = () => {
 
       <div className="container mx-auto px-6 py-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-white border shadow-sm">
+          <TabsList className="grid w-full grid-cols-7 h-auto p-1">
             <TabsTrigger value="dashboard" className="gap-2">
-              <Icon name="LayoutDashboard" size={18} />
-              Дашборд
+              <Icon name="LayoutDashboard" size={16} />
+              <span className="hidden sm:inline">Дашборд</span>
             </TabsTrigger>
             <TabsTrigger value="estimates" className="gap-2">
-              <Icon name="FileText" size={18} />
-              Сметы
+              <Icon name="FileText" size={16} />
+              <span className="hidden sm:inline">Сметы</span>
             </TabsTrigger>
             <TabsTrigger value="acts" className="gap-2">
-              <Icon name="FileCheck" size={18} />
-              Акты
+              <Icon name="FileCheck" size={16} />
+              <span className="hidden sm:inline">Акты</span>
             </TabsTrigger>
-            <TabsTrigger value="directory" className="gap-2">
-              <Icon name="Book" size={18} />
-              Справочник
+            <TabsTrigger value="contracts" className="gap-2">
+              <Icon name="FileSignature" size={16} />
+              <span className="hidden sm:inline">Договоры</span>
+            </TabsTrigger>
+            <TabsTrigger value="contractors" className="gap-2">
+              <Icon name="Users" size={16} />
+              <span className="hidden sm:inline">Контрагенты</span>
+            </TabsTrigger>
+            <TabsTrigger value="finance" className="gap-2">
+              <Icon name="Wallet" size={16} />
+              <span className="hidden sm:inline">Финансы</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="gap-2">
+              <Icon name="BarChart3" size={16} />
+              <span className="hidden sm:inline">Отчёты</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="border-l-4 border-l-blue-500 hover:shadow-lg transition-shadow">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-xs font-medium">Всего смет</CardDescription>
-                  <CardTitle className="text-3xl font-bold text-slate-900">{estimates.length}</CardTitle>
+                  <CardDescription>Общая выручка</CardDescription>
+                  <CardTitle className="text-3xl">{totalRevenue.toLocaleString('ru-RU')} ₽</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Icon name="TrendingUp" size={16} className="text-green-600" />
-                    <span>+2 за месяц</span>
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <Icon name="TrendingUp" size={16} />
+                    <span>+12% за месяц</span>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-green-500 hover:shadow-lg transition-shadow">
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-xs font-medium">Активных смет</CardDescription>
-                  <CardTitle className="text-3xl font-bold text-slate-900">{activeEstimates}</CardTitle>
+                  <CardDescription>Оплачено</CardDescription>
+                  <CardTitle className="text-3xl">{totalPaid.toLocaleString('ru-RU')} ₽</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Icon name="Activity" size={16} className="text-blue-600" />
-                    <span>В работе</span>
+                  <div className="text-sm text-slate-600">
+                    Задолженность: {(totalRevenue - totalPaid).toLocaleString('ru-RU')} ₽
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-purple-500 hover:shadow-lg transition-shadow">
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-xs font-medium">Общая сумма</CardDescription>
-                  <CardTitle className="text-3xl font-bold text-slate-900">
-                    {totalRevenue.toLocaleString('ru-RU')} ₽
-                  </CardTitle>
+                  <CardDescription>Активные проекты</CardDescription>
+                  <CardTitle className="text-3xl">{activeEstimates}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Icon name="Wallet" size={16} className="text-purple-600" />
-                    <span>По всем сметам</span>
+                  <div className="text-sm text-slate-600">
+                    Завершено: {completedEstimates}
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-orange-500 hover:shadow-lg transition-shadow">
+              <Card>
                 <CardHeader className="pb-3">
-                  <CardDescription className="text-xs font-medium">Получено</CardDescription>
-                  <CardTitle className="text-3xl font-bold text-slate-900">
-                    {totalPaid.toLocaleString('ru-RU')} ₽
-                  </CardTitle>
+                  <CardDescription>Прибыль</CardDescription>
+                  <CardTitle className="text-3xl">{profit.toLocaleString('ru-RU')} ₽</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <Icon name="CheckCircle" size={16} className="text-green-600" />
-                    <span>{Math.round((totalPaid / totalRevenue) * 100)}% оплачено</span>
+                  <div className="text-sm text-slate-600">
+                    Маржа: {((profit / totalIncome) * 100).toFixed(1)}%
                   </div>
                 </CardContent>
               </Card>
@@ -330,118 +425,61 @@ const Index = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon name="BarChart3" size={20} />
-                    Статистика по статусам
-                  </CardTitle>
+                  <CardTitle>Недавние сметы</CardTitle>
+                  <CardDescription>Последние созданные проекты</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                        <span className="font-medium">Черновики</span>
+                    {estimates.slice(0, 3).map((est) => (
+                      <div key={est.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <div>
+                          <div className="font-semibold">{est.number}</div>
+                          <div className="text-sm text-slate-600">{est.client}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold">{est.totalAmount.toLocaleString('ru-RU')} ₽</div>
+                          <Badge variant="outline" className={getStatusColor(est.status)}>
+                            {getStatusText(est.status)}
+                          </Badge>
+                        </div>
                       </div>
-                      <span className="text-2xl font-bold">{estimates.filter(e => e.status === 'draft').length}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                        <span className="font-medium">В работе</span>
-                      </div>
-                      <span className="text-2xl font-bold">{activeEstimates}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                        <span className="font-medium">Завершено</span>
-                      </div>
-                      <span className="text-2xl font-bold">{completedEstimates}</span>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon name="PieChart" size={20} />
-                    Финансовая аналитика
-                  </CardTitle>
+                  <CardTitle>Последние платежи</CardTitle>
+                  <CardDescription>История финансовых операций</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Процент оплаты</span>
-                        <span className="text-sm font-bold">{Math.round((totalPaid / totalRevenue) * 100)}%</span>
+                    {payments.slice(0, 3).map((payment) => (
+                      <div key={payment.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            payment.type === 'income' ? 'bg-green-100' : 'bg-red-100'
+                          }`}>
+                            <Icon name={payment.type === 'income' ? 'ArrowDownLeft' : 'ArrowUpRight'} 
+                              size={16} 
+                              className={payment.type === 'income' ? 'text-green-600' : 'text-red-600'} 
+                            />
+                          </div>
+                          <div>
+                            <div className="font-semibold text-sm">{payment.category}</div>
+                            <div className="text-xs text-slate-600">{payment.client}</div>
+                          </div>
+                        </div>
+                        <div className={`font-semibold ${payment.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          {payment.type === 'income' ? '+' : '-'}{payment.amount.toLocaleString('ru-RU')} ₽
+                        </div>
                       </div>
-                      <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-500"
-                          style={{ width: `${(totalPaid / totalRevenue) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="pt-4 space-y-3">
-                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                        <span className="text-sm font-medium">Оплачено</span>
-                        <span className="text-lg font-bold text-green-700">
-                          {totalPaid.toLocaleString('ru-RU')} ₽
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
-                        <span className="text-sm font-medium">К оплате</span>
-                        <span className="text-lg font-bold text-orange-700">
-                          {(totalRevenue - totalPaid).toLocaleString('ru-RU')} ₽
-                        </span>
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
             </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Icon name="Clock" size={20} />
-                  Последние сметы
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Номер</TableHead>
-                      <TableHead>Клиент</TableHead>
-                      <TableHead>Объект</TableHead>
-                      <TableHead>Дата</TableHead>
-                      <TableHead>Статус</TableHead>
-                      <TableHead className="text-right">Сумма</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {estimates.slice(0, 5).map((estimate) => (
-                      <TableRow key={estimate.id} className="cursor-pointer hover:bg-slate-50">
-                        <TableCell className="font-medium">{estimate.number}</TableCell>
-                        <TableCell>{estimate.client}</TableCell>
-                        <TableCell className="text-sm text-slate-600">{estimate.object}</TableCell>
-                        <TableCell className="text-sm">{new Date(estimate.date).toLocaleDateString('ru-RU')}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={getStatusColor(estimate.status)}>
-                            {getStatusText(estimate.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          {estimate.totalAmount.toLocaleString('ru-RU')} ₽
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="estimates">
@@ -449,8 +487,8 @@ const Index = () => {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Список смет</CardTitle>
-                    <CardDescription>Управление сметами и документами</CardDescription>
+                    <CardTitle>Сметы</CardTitle>
+                    <CardDescription>Управление сметами и расчётами</CardDescription>
                   </div>
                   <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                     <DialogTrigger asChild>
@@ -462,9 +500,19 @@ const Index = () => {
                     <DialogContent className="max-w-2xl">
                       <DialogHeader>
                         <DialogTitle>Новая смета</DialogTitle>
-                        <DialogDescription>Заполните данные для создания новой сметы</DialogDescription>
+                        <DialogDescription>Создание новой сметы на ремонтные работы</DialogDescription>
                       </DialogHeader>
                       <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Клиент</Label>
+                            <Input placeholder="Название компании или ФИО" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Объект</Label>
+                            <Input placeholder="Адрес объекта" />
+                          </div>
+                        </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
                             <Label>Номер сметы</Label>
@@ -474,18 +522,6 @@ const Index = () => {
                             <Label>Дата</Label>
                             <Input type="date" />
                           </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Клиент</Label>
-                          <Input placeholder="Название организации или ФИО" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Объект</Label>
-                          <Input placeholder="Адрес объекта" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Описание работ</Label>
-                          <Textarea placeholder="Краткое описание работ по смете" rows={3} />
                         </div>
                       </div>
                       <div className="flex gap-3 justify-end">
@@ -530,9 +566,12 @@ const Index = () => {
                           {estimate.totalAmount.toLocaleString('ru-RU')} ₽
                         </TableCell>
                         <TableCell className="text-right">
-                          <span className="text-green-700 font-medium">
-                            {estimate.paidAmount.toLocaleString('ru-RU')} ₽
-                          </span>
+                          <div className="text-sm">
+                            <span className="font-medium">{estimate.paidAmount.toLocaleString('ru-RU')} ₽</span>
+                            <div className="text-xs text-slate-500">
+                              {Math.round((estimate.paidAmount / estimate.totalAmount) * 100)}%
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
@@ -660,8 +699,8 @@ const Index = () => {
                           <TableCell className="text-sm text-slate-600">{act.object}</TableCell>
                           <TableCell className="text-sm">{new Date(act.date).toLocaleDateString('ru-RU')}</TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={getActStatusColor(act.status)}>
-                              {getActStatusText(act.status)}
+                            <Badge variant="outline" className={getStatusColor(act.status)}>
+                              {getStatusText(act.status)}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right font-semibold">
@@ -689,73 +728,381 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="directory">
+          <TabsContent value="contracts">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Справочник работ и материалов</CardTitle>
-                    <CardDescription>Каталог позиций для быстрого добавления в сметы</CardDescription>
+                    <CardTitle>Договоры</CardTitle>
+                    <CardDescription>Управление договорами с контрагентами</CardDescription>
                   </div>
-                  <Button variant="outline" className="gap-2">
+                  <Button className="gap-2" onClick={() => setIsCreateContractDialogOpen(true)}>
                     <Icon name="Plus" size={18} />
-                    Добавить позицию
+                    Создать договор
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="all" className="space-y-4">
-                  <TabsList>
-                    <TabsTrigger value="all">Все позиции</TabsTrigger>
-                    <TabsTrigger value="work">Работы</TabsTrigger>
-                    <TabsTrigger value="material">Материалы</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="all">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Наименование</TableHead>
-                          <TableHead>Тип</TableHead>
-                          <TableHead>Ед. изм.</TableHead>
-                          <TableHead className="text-right">Цена</TableHead>
-                          <TableHead className="text-right">Действия</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Номер договора</TableHead>
+                      <TableHead>Смета</TableHead>
+                      <TableHead>Клиент</TableHead>
+                      <TableHead>Дата создания</TableHead>
+                      <TableHead>Дата подписания</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead className="text-right">Сумма</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contracts.map((contract) => (
+                      <TableRow key={contract.id} className="hover:bg-slate-50">
+                        <TableCell className="font-medium">{contract.number}</TableCell>
+                        <TableCell className="text-sm text-slate-600">{contract.estimateNumber}</TableCell>
+                        <TableCell>{contract.client}</TableCell>
+                        <TableCell className="text-sm">{new Date(contract.date).toLocaleDateString('ru-RU')}</TableCell>
+                        <TableCell className="text-sm">
+                          {contract.signDate ? new Date(contract.signDate).toLocaleDateString('ru-RU') : '—'}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={getStatusColor(contract.status)}>
+                            {getStatusText(contract.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {contract.totalAmount.toLocaleString('ru-RU')} ₽
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="ghost" size="sm">
+                              <Icon name="Eye" size={16} />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Icon name="Edit" size={16} />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Icon name="Download" size={16} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="contractors">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Контрагенты</CardTitle>
+                    <CardDescription>База клиентов и подрядчиков</CardDescription>
+                  </div>
+                  <Button className="gap-2" onClick={() => setIsAddContractorDialogOpen(true)}>
+                    <Icon name="Plus" size={18} />
+                    Добавить контрагента
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Наименование</TableHead>
+                      <TableHead>ИНН</TableHead>
+                      <TableHead>Тип</TableHead>
+                      <TableHead>Телефон</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead className="text-right">Проектов</TableHead>
+                      <TableHead className="text-right">Общая сумма</TableHead>
+                      <TableHead className="text-right">Действия</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contractors.map((contractor) => (
+                      <TableRow key={contractor.id} className="hover:bg-slate-50">
+                        <TableCell className="font-medium">{contractor.name}</TableCell>
+                        <TableCell className="text-sm">{contractor.inn}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {contractor.type === 'legal' ? 'Юр. лицо' : 'Физ. лицо'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">{contractor.phone}</TableCell>
+                        <TableCell className="text-sm text-slate-600">{contractor.email}</TableCell>
+                        <TableCell className="text-right">{contractor.projects}</TableCell>
+                        <TableCell className="text-right font-semibold">
+                          {contractor.totalAmount.toLocaleString('ru-RU')} ₽
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="ghost" size="sm">
+                              <Icon name="Eye" size={16} />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <Icon name="Edit" size={16} />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="finance">
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Поступления</CardDescription>
+                    <CardTitle className="text-3xl text-green-600">
+                      +{totalIncome.toLocaleString('ru-RU')} ₽
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-slate-600">
+                      {payments.filter(p => p.type === 'income').length} операций
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Расходы</CardDescription>
+                    <CardTitle className="text-3xl text-red-600">
+                      -{totalExpense.toLocaleString('ru-RU')} ₽
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-slate-600">
+                      {payments.filter(p => p.type === 'expense').length} операций
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardDescription>Чистая прибыль</CardDescription>
+                    <CardTitle className="text-3xl">
+                      {profit.toLocaleString('ru-RU')} ₽
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-slate-600">
+                      Маржа: {((profit / totalIncome) * 100).toFixed(1)}%
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Финансовые операции</CardTitle>
+                      <CardDescription>История доходов и расходов</CardDescription>
+                    </div>
+                    <Button className="gap-2" onClick={() => setIsAddPaymentDialogOpen(true)}>
+                      <Icon name="Plus" size={18} />
+                      Добавить операцию
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Дата</TableHead>
+                        <TableHead>Тип</TableHead>
+                        <TableHead>Категория</TableHead>
+                        <TableHead>Смета</TableHead>
+                        <TableHead>Контрагент</TableHead>
+                        <TableHead>Описание</TableHead>
+                        <TableHead className="text-right">Сумма</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payments.map((payment) => (
+                        <TableRow key={payment.id} className="hover:bg-slate-50">
+                          <TableCell className="text-sm">{new Date(payment.date).toLocaleDateString('ru-RU')}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={payment.type === 'income' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}>
+                              {payment.type === 'income' ? 'Доход' : 'Расход'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">{payment.category}</TableCell>
+                          <TableCell className="text-sm text-slate-600">{payment.estimateNumber}</TableCell>
+                          <TableCell className="text-sm">{payment.client}</TableCell>
+                          <TableCell className="text-sm text-slate-600">{payment.description}</TableCell>
+                          <TableCell className={`text-right font-semibold ${payment.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                            {payment.type === 'income' ? '+' : '-'}{payment.amount.toLocaleString('ru-RU')} ₽
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {workDirectory.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">{item.name}</TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={
-                                item.category === 'work' 
-                                  ? 'bg-blue-50 text-blue-700 border-blue-200' 
-                                  : 'bg-purple-50 text-purple-700 border-purple-200'
-                              }>
-                                {item.category === 'work' ? 'Работа' : 'Материал'}
-                              </Badge>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reports">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Отчёт по проектам</CardTitle>
+                  <CardDescription>Статистика выполнения смет</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                      <div>
+                        <div className="text-sm text-slate-600">Всего проектов</div>
+                        <div className="text-2xl font-bold">{estimates.length}</div>
+                      </div>
+                      <Icon name="FileText" size={32} className="text-slate-400" />
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 bg-gray-50 rounded-lg text-center">
+                        <div className="text-lg font-bold">{estimates.filter(e => e.status === 'draft').length}</div>
+                        <div className="text-xs text-slate-600">Черновики</div>
+                      </div>
+                      <div className="p-3 bg-blue-50 rounded-lg text-center">
+                        <div className="text-lg font-bold text-blue-600">{activeEstimates}</div>
+                        <div className="text-xs text-slate-600">В работе</div>
+                      </div>
+                      <div className="p-3 bg-green-50 rounded-lg text-center">
+                        <div className="text-lg font-bold text-green-600">{completedEstimates}</div>
+                        <div className="text-xs text-slate-600">Завершено</div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div>
+                      <div className="text-sm text-slate-600 mb-2">Средний чек</div>
+                      <div className="text-2xl font-bold">
+                        {(totalRevenue / estimates.length).toLocaleString('ru-RU')} ₽
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-slate-600 mb-2">Процент оплаты</div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-3 bg-slate-200 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-green-500"
+                            style={{ width: `${(totalPaid / totalRevenue) * 100}%` }}
+                          />
+                        </div>
+                        <div className="text-sm font-semibold">
+                          {Math.round((totalPaid / totalRevenue) * 100)}%
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Финансовый отчёт</CardTitle>
+                  <CardDescription>Анализ доходов и расходов</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg">
+                      <div>
+                        <div className="text-sm text-green-600">Доходы</div>
+                        <div className="text-2xl font-bold text-green-700">+{totalIncome.toLocaleString('ru-RU')} ₽</div>
+                      </div>
+                      <Icon name="TrendingUp" size={32} className="text-green-500" />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
+                      <div>
+                        <div className="text-sm text-red-600">Расходы</div>
+                        <div className="text-2xl font-bold text-red-700">-{totalExpense.toLocaleString('ru-RU')} ₽</div>
+                      </div>
+                      <Icon name="TrendingDown" size={32} className="text-red-500" />
+                    </div>
+
+                    <Separator />
+
+                    <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                      <div className="text-sm text-slate-600 mb-1">Чистая прибыль</div>
+                      <div className="text-3xl font-bold">{profit.toLocaleString('ru-RU')} ₽</div>
+                      <div className="text-sm text-slate-600 mt-2">
+                        Рентабельность: {((profit / totalIncome) * 100).toFixed(1)}%
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-sm text-slate-600 mb-3">Структура расходов</div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span>Материалы</span>
+                          <span className="font-semibold">85 000 ₽</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-slate-600">
+                          <span>Прочие расходы</span>
+                          <span>—</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Топ контрагентов</CardTitle>
+                  <CardDescription>Клиенты по объёму работ</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Позиция</TableHead>
+                        <TableHead>Наименование</TableHead>
+                        <TableHead className="text-right">Проектов</TableHead>
+                        <TableHead className="text-right">Общая сумма</TableHead>
+                        <TableHead className="text-right">Средний чек</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {contractors
+                        .sort((a, b) => b.totalAmount - a.totalAmount)
+                        .slice(0, 5)
+                        .map((contractor, index) => (
+                          <TableRow key={contractor.id}>
+                            <TableCell className="font-bold text-lg text-slate-400">
+                              #{index + 1}
                             </TableCell>
-                            <TableCell>{item.unit}</TableCell>
+                            <TableCell className="font-medium">{contractor.name}</TableCell>
+                            <TableCell className="text-right">{contractor.projects}</TableCell>
                             <TableCell className="text-right font-semibold">
-                              {item.price.toLocaleString('ru-RU')} ₽
+                              {contractor.totalAmount.toLocaleString('ru-RU')} ₽
                             </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex gap-2 justify-end">
-                                <Button variant="ghost" size="sm">
-                                  <Icon name="Edit" size={16} />
-                                </Button>
-                                <Button variant="ghost" size="sm">
-                                  <Icon name="Trash2" size={16} />
-                                </Button>
-                              </div>
+                            <TableCell className="text-right text-slate-600">
+                              {(contractor.totalAmount / contractor.projects).toLocaleString('ru-RU')} ₽
                             </TableCell>
                           </TableRow>
                         ))}
-                      </TableBody>
-                    </Table>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -906,9 +1253,17 @@ const Index = () => {
             </div>
 
             <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button variant="outline" onClick={handleAddAdditionalWork}>
+                <Icon name="FilePlus" size={18} className="mr-2" />
+                Допработы
+              </Button>
               <Button variant="outline">
                 <Icon name="FileDown" size={18} className="mr-2" />
                 Экспорт в PDF
+              </Button>
+              <Button variant="outline" onClick={handleCreateContract}>
+                <Icon name="FileSignature" size={18} className="mr-2" />
+                Создать договор
               </Button>
               <Button variant="outline" onClick={handleCreateAct}>
                 <Icon name="FileCheck" size={18} className="mr-2" />
@@ -925,6 +1280,218 @@ const Index = () => {
                 Сохранить
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAdditionalWorksDialogOpen} onOpenChange={setIsAdditionalWorksDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Дополнительные работы</DialogTitle>
+            <DialogDescription>
+              Смета {selectedEstimate?.number} • {selectedEstimate?.client}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-start gap-3">
+                <Icon name="Info" size={20} className="text-blue-600 mt-0.5" />
+                <div className="text-sm text-blue-900">
+                  <p className="font-semibold mb-1">Что такое дополнительные работы?</p>
+                  <p>Это работы, которые не были включены в первоначальную смету, но потребовались в процессе выполнения проекта. Они учитываются отдельно и увеличивают общую стоимость проекта.</p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label>Позиции дополнительных работ</Label>
+                <Button variant="outline" size="sm" onClick={handleAddItem}>
+                  <Icon name="Plus" size={16} className="mr-2" />
+                  Добавить
+                </Button>
+              </div>
+
+              <div className="border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Наименование</TableHead>
+                      <TableHead>Ед.</TableHead>
+                      <TableHead className="text-right">Кол-во</TableHead>
+                      <TableHead className="text-right">Цена</TableHead>
+                      <TableHead className="text-right">Сумма</TableHead>
+                      <TableHead className="w-[60px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="text-sm text-slate-500 text-center" colSpan={6}>
+                        Добавьте первую позицию дополнительных работ
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-slate-600">Итого дополнительных работ:</p>
+                <p className="text-2xl font-bold text-primary">0 ₽</p>
+              </div>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setIsAdditionalWorksDialogOpen(false)}>
+                  Отмена
+                </Button>
+                <Button onClick={() => {
+                  toast({
+                    title: "Дополнительные работы сохранены",
+                    description: "Позиции добавлены к смете",
+                  });
+                  setIsAdditionalWorksDialogOpen(false);
+                }}>
+                  Сохранить
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddContractorDialogOpen} onOpenChange={setIsAddContractorDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Новый контрагент</DialogTitle>
+            <DialogDescription>Добавление клиента или подрядчика в базу</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Тип контрагента</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите тип" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="legal">Юридическое лицо</SelectItem>
+                  <SelectItem value="individual">Физическое лицо</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Наименование / ФИО</Label>
+              <Input placeholder="ООО Строй-Инвест или Иванов Иван Иванович" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>ИНН</Label>
+                <Input placeholder="7701234567" />
+              </div>
+              <div className="space-y-2">
+                <Label>Телефон</Label>
+                <Input placeholder="+7 (___) ___-__-__" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input type="email" placeholder="email@example.com" />
+            </div>
+            <div className="space-y-2">
+              <Label>Примечание</Label>
+              <Textarea placeholder="Дополнительная информация о контрагенте" rows={3} />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setIsAddContractorDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={() => {
+              toast({
+                title: "Контрагент добавлен",
+                description: "Новый контрагент успешно добавлен в базу",
+              });
+              setIsAddContractorDialogOpen(false);
+            }}>
+              Добавить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddPaymentDialogOpen} onOpenChange={setIsAddPaymentDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Новая финансовая операция</DialogTitle>
+            <DialogDescription>Добавление дохода или расхода</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Тип операции</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите тип" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">Доход</SelectItem>
+                    <SelectItem value="expense">Расход</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Дата</Label>
+                <Input type="date" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Смета</Label>
+              <Select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите смету" />
+                </SelectTrigger>
+                <SelectContent>
+                  {estimates.map((est) => (
+                    <SelectItem key={est.id} value={est.id}>
+                      {est.number} - {est.client}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Категория</Label>
+                <Input placeholder="Например: Аванс, Материалы" />
+              </div>
+              <div className="space-y-2">
+                <Label>Сумма</Label>
+                <Input type="number" placeholder="0" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Контрагент</Label>
+              <Input placeholder="Наименование контрагента" />
+            </div>
+            <div className="space-y-2">
+              <Label>Описание</Label>
+              <Textarea placeholder="Комментарий к операции" rows={3} />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setIsAddPaymentDialogOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={() => {
+              toast({
+                title: "Операция добавлена",
+                description: "Финансовая операция успешно записана",
+              });
+              setIsAddPaymentDialogOpen(false);
+            }}>
+              Сохранить
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
