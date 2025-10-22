@@ -12,6 +12,8 @@ import Icon from '@/components/ui/icon';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
+import { generateContract, generateEstimatePDF, generateActPDF } from '@/utils/pdfGenerator';
+import { EmailDialog } from '@/components/EmailDialog';
 
 interface WorkItem {
   id: string;
@@ -185,6 +187,10 @@ const Index = () => {
   const [isAdditionalWorksDialogOpen, setIsAdditionalWorksDialogOpen] = useState(false);
   const [isAddContractorDialogOpen, setIsAddContractorDialogOpen] = useState(false);
   const [isAddPaymentDialogOpen, setIsAddPaymentDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailDocumentType, setEmailDocumentType] = useState<'contract' | 'estimate' | 'act'>('contract');
+  const [emailDocumentNumber, setEmailDocumentNumber] = useState('');
+  const [emailRecipient, setEmailRecipient] = useState({ email: '', name: '' });
 
   const totalRevenue = estimates.reduce((sum, est) => sum + est.totalAmount, 0);
   const totalPaid = estimates.reduce((sum, est) => sum + est.paidAmount, 0);
@@ -300,12 +306,75 @@ const Index = () => {
     };
     
     setContracts([...contracts, newContract]);
+    
+    generateContract({
+      number: newContract.number,
+      date: newContract.date,
+      client: newContract.client,
+      object: newContract.object,
+      totalAmount: newContract.totalAmount,
+      items: estimateItems,
+      terms: newContract.terms
+    });
+    
     toast({
-      title: "Договор создан",
+      title: "Договор создан и загружен",
       description: `Создан договор ${newContract.number} на сумму ${newContract.totalAmount.toLocaleString('ru-RU')} ₽`,
     });
     setIsDetailDialogOpen(false);
     setActiveTab('contracts');
+  };
+
+  const handleDownloadContract = (contract: Contract) => {
+    const estimate = estimates.find(e => e.id === contract.estimateId);
+    if (!estimate) return;
+    
+    generateContract({
+      number: contract.number,
+      date: contract.date,
+      client: contract.client,
+      object: contract.object,
+      totalAmount: contract.totalAmount,
+      items: estimate.items.length > 0 ? estimate.items : estimateItems,
+      terms: contract.terms
+    });
+  };
+
+  const handleDownloadEstimate = () => {
+    if (!selectedEstimate) return;
+    
+    generateEstimatePDF({
+      number: selectedEstimate.number,
+      date: selectedEstimate.date,
+      client: selectedEstimate.client,
+      object: selectedEstimate.object,
+      items: estimateItems,
+      totalAmount: calculateTotal()
+    });
+    
+    toast({
+      title: "Смета загружена",
+      description: "PDF файл успешно сохранен",
+    });
+  };
+
+  const handleDownloadAct = (act: Act) => {
+    generateActPDF({
+      number: act.number,
+      date: act.date,
+      estimateNumber: act.estimateNumber,
+      client: act.client,
+      object: act.object,
+      items: act.items,
+      totalAmount: act.totalAmount
+    });
+  };
+
+  const handleSendEmail = (type: 'contract' | 'estimate' | 'act', number: string, client: string) => {
+    setEmailDocumentType(type);
+    setEmailDocumentNumber(number);
+    setEmailRecipient({ email: '', name: client });
+    setEmailDialogOpen(true);
   };
 
   const handleAddAdditionalWork = () => {
@@ -711,10 +780,10 @@ const Index = () => {
                               <Button variant="ghost" size="sm">
                                 <Icon name="Eye" size={16} />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => handleDownloadAct(act)}>
                                 <Icon name="Download" size={16} />
                               </Button>
-                              <Button variant="ghost" size="sm">
+                              <Button variant="ghost" size="sm" onClick={() => handleSendEmail('act', act.number, act.client)}>
                                 <Icon name="Send" size={16} />
                               </Button>
                             </div>
@@ -782,8 +851,11 @@ const Index = () => {
                             <Button variant="ghost" size="sm">
                               <Icon name="Edit" size={16} />
                             </Button>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleDownloadContract(contract)}>
                               <Icon name="Download" size={16} />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleSendEmail('contract', contract.number, contract.client)}>
+                              <Icon name="Send" size={16} />
                             </Button>
                           </div>
                         </TableCell>
@@ -1257,7 +1329,7 @@ const Index = () => {
                 <Icon name="FilePlus" size={18} className="mr-2" />
                 Допработы
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleDownloadEstimate}>
                 <Icon name="FileDown" size={18} className="mr-2" />
                 Экспорт в PDF
               </Button>
@@ -1495,6 +1567,15 @@ const Index = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <EmailDialog
+        open={emailDialogOpen}
+        onOpenChange={setEmailDialogOpen}
+        documentType={emailDocumentType}
+        documentNumber={emailDocumentNumber}
+        recipientName={emailRecipient.name}
+        recipientEmail={emailRecipient.email}
+      />
     </div>
   );
 };
