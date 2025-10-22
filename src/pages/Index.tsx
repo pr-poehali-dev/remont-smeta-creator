@@ -33,6 +33,19 @@ interface Estimate {
   paidAmount: number;
 }
 
+interface Act {
+  id: string;
+  number: string;
+  estimateId: string;
+  estimateNumber: string;
+  client: string;
+  object: string;
+  date: string;
+  status: 'draft' | 'signed' | 'paid';
+  items: WorkItem[];
+  totalAmount: number;
+}
+
 const Index = () => {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -86,6 +99,24 @@ const Index = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [estimateItems, setEstimateItems] = useState<WorkItem[]>([]);
+  const [isCreateActDialogOpen, setIsCreateActDialogOpen] = useState(false);
+  const [acts, setActs] = useState<Act[]>([
+    {
+      id: 'a1',
+      number: 'АКТ-2024-001',
+      estimateId: '1',
+      estimateNumber: 'СМ-2024-001',
+      client: 'ООО "Строй-Инвест"',
+      object: 'ул. Ленина, 45, кв. 12',
+      date: '2024-10-20',
+      status: 'signed',
+      items: [
+        { id: 'i1', name: 'Демонтаж старой отделки', unit: 'м²', quantity: 45, price: 450, category: 'work' },
+        { id: 'i2', name: 'Штукатурка стен по маякам', unit: 'м²', quantity: 120, price: 650, category: 'work' },
+      ],
+      totalAmount: 98250
+    }
+  ]);
 
   const totalRevenue = estimates.reduce((sum, est) => sum + est.totalAmount, 0);
   const totalPaid = estimates.reduce((sum, est) => sum + est.paidAmount, 0);
@@ -149,6 +180,49 @@ const Index = () => {
 
   const calculateTotal = () => {
     return estimateItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+  };
+
+  const handleCreateAct = () => {
+    if (!selectedEstimate) return;
+    
+    const newAct: Act = {
+      id: `a${acts.length + 1}`,
+      number: `АКТ-2024-${String(acts.length + 1).padStart(3, '0')}`,
+      estimateId: selectedEstimate.id,
+      estimateNumber: selectedEstimate.number,
+      client: selectedEstimate.client,
+      object: selectedEstimate.object,
+      date: new Date().toISOString().split('T')[0],
+      status: 'draft',
+      items: estimateItems,
+      totalAmount: calculateTotal()
+    };
+    
+    setActs([...acts, newAct]);
+    toast({
+      title: "Акт создан",
+      description: `Создан акт ${newAct.number} на сумму ${newAct.totalAmount.toLocaleString('ru-RU')} ₽`,
+    });
+    setIsDetailDialogOpen(false);
+    setActiveTab('acts');
+  };
+
+  const getActStatusColor = (status: string) => {
+    switch (status) {
+      case 'draft': return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'signed': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'paid': return 'bg-green-100 text-green-800 border-green-300';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getActStatusText = (status: string) => {
+    switch (status) {
+      case 'draft': return 'Черновик';
+      case 'signed': return 'Подписан';
+      case 'paid': return 'Оплачен';
+      default: return status;
+    }
   };
 
   return (
@@ -484,21 +558,133 @@ const Index = () => {
           <TabsContent value="acts">
             <Card>
               <CardHeader>
-                <CardTitle>Акты выполненных работ</CardTitle>
-                <CardDescription>Управление актами и подписание документов</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Акты выполненных работ</CardTitle>
+                    <CardDescription>Управление актами и подписание документов</CardDescription>
+                  </div>
+                  <Dialog open={isCreateActDialogOpen} onOpenChange={setIsCreateActDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button className="gap-2">
+                        <Icon name="Plus" size={18} />
+                        Создать акт
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl">
+                      <DialogHeader>
+                        <DialogTitle>Новый акт выполненных работ</DialogTitle>
+                        <DialogDescription>Выберите смету для создания акта</DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                          <Label>Смета</Label>
+                          <Select>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Выберите смету" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {estimates.map((est) => (
+                                <SelectItem key={est.id} value={est.id}>
+                                  {est.number} - {est.client}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Номер акта</Label>
+                            <Input placeholder="АКТ-2024-002" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Дата</Label>
+                            <Input type="date" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Примечание</Label>
+                          <Textarea placeholder="Дополнительная информация" rows={3} />
+                        </div>
+                      </div>
+                      <div className="flex gap-3 justify-end">
+                        <Button variant="outline" onClick={() => setIsCreateActDialogOpen(false)}>
+                          Отмена
+                        </Button>
+                        <Button onClick={() => {
+                          toast({
+                            title: "Акт создан",
+                            description: "Новый акт успешно добавлен в систему",
+                          });
+                          setIsCreateActDialogOpen(false);
+                        }}>
+                          Создать акт
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Icon name="FileCheck" size={32} className="text-blue-600" />
+                {acts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Icon name="FileCheck" size={32} className="text-blue-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">Создайте первый акт</h3>
+                    <p className="text-slate-600 mb-6">Акты создаются на основе существующих смет</p>
+                    <Button onClick={() => setIsCreateActDialogOpen(true)}>
+                      <Icon name="Plus" size={18} className="mr-2" />
+                      Создать акт
+                    </Button>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">Создайте первый акт</h3>
-                  <p className="text-slate-600 mb-6">Акты создаются на основе существующих смет</p>
-                  <Button>
-                    <Icon name="Plus" size={18} className="mr-2" />
-                    Создать акт
-                  </Button>
-                </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Номер акта</TableHead>
+                        <TableHead>Смета</TableHead>
+                        <TableHead>Клиент</TableHead>
+                        <TableHead>Объект</TableHead>
+                        <TableHead>Дата</TableHead>
+                        <TableHead>Статус</TableHead>
+                        <TableHead className="text-right">Сумма</TableHead>
+                        <TableHead className="text-right">Действия</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {acts.map((act) => (
+                        <TableRow key={act.id} className="hover:bg-slate-50">
+                          <TableCell className="font-medium">{act.number}</TableCell>
+                          <TableCell className="text-sm text-slate-600">{act.estimateNumber}</TableCell>
+                          <TableCell>{act.client}</TableCell>
+                          <TableCell className="text-sm text-slate-600">{act.object}</TableCell>
+                          <TableCell className="text-sm">{new Date(act.date).toLocaleDateString('ru-RU')}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={getActStatusColor(act.status)}>
+                              {getActStatusText(act.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            {act.totalAmount.toLocaleString('ru-RU')} ₽
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="ghost" size="sm">
+                                <Icon name="Eye" size={16} />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Icon name="Download" size={16} />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Icon name="Send" size={16} />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -724,7 +910,7 @@ const Index = () => {
                 <Icon name="FileDown" size={18} className="mr-2" />
                 Экспорт в PDF
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleCreateAct}>
                 <Icon name="FileCheck" size={18} className="mr-2" />
                 Создать акт
               </Button>
