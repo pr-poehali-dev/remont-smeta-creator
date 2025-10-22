@@ -84,6 +84,8 @@ const Index = () => {
 
   const [selectedEstimate, setSelectedEstimate] = useState<Estimate | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [estimateItems, setEstimateItems] = useState<WorkItem[]>([]);
 
   const totalRevenue = estimates.reduce((sum, est) => sum + est.totalAmount, 0);
   const totalPaid = estimates.reduce((sum, est) => sum + est.paidAmount, 0);
@@ -114,6 +116,39 @@ const Index = () => {
       description: "Новая смета успешно добавлена в систему",
     });
     setIsCreateDialogOpen(false);
+  };
+
+  const handleViewEstimate = (estimate: Estimate) => {
+    setSelectedEstimate(estimate);
+    setEstimateItems(estimate.items.length > 0 ? estimate.items : [
+      { id: 'i1', name: 'Демонтаж старой отделки', unit: 'м²', quantity: 45, price: 450, category: 'work' },
+      { id: 'i2', name: 'Штукатурка стен по маякам', unit: 'м²', quantity: 120, price: 650, category: 'work' },
+      { id: 'i3', name: 'Шпаклевка стен', unit: 'м²', quantity: 120, price: 380, category: 'work' },
+      { id: 'i4', name: 'Укладка плитки', unit: 'м²', quantity: 28, price: 1200, category: 'work' },
+      { id: 'i5', name: 'Плитка керамическая', unit: 'м²', quantity: 30, price: 890, category: 'material' },
+      { id: 'i6', name: 'Цемент М500', unit: 'кг', quantity: 250, price: 12, category: 'material' },
+    ]);
+    setIsDetailDialogOpen(true);
+  };
+
+  const handleAddItem = () => {
+    const newItem: WorkItem = {
+      id: `i${estimateItems.length + 1}`,
+      name: 'Новая позиция',
+      unit: 'шт',
+      quantity: 1,
+      price: 0,
+      category: 'work'
+    };
+    setEstimateItems([...estimateItems, newItem]);
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setEstimateItems(estimateItems.filter(item => item.id !== id));
+  };
+
+  const calculateTotal = () => {
+    return estimateItems.reduce((sum, item) => sum + (item.quantity * item.price), 0);
   };
 
   return (
@@ -427,7 +462,7 @@ const Index = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex gap-2 justify-end">
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={() => handleViewEstimate(estimate)}>
                               <Icon name="Eye" size={16} />
                             </Button>
                             <Button variant="ghost" size="sm">
@@ -538,6 +573,175 @@ const Index = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              <Icon name="FileText" size={24} />
+              Смета {selectedEstimate?.number}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedEstimate?.client} • {selectedEstimate?.object}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Дата</p>
+                <p className="font-semibold">{selectedEstimate && new Date(selectedEstimate.date).toLocaleDateString('ru-RU')}</p>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Статус</p>
+                <Badge variant="outline" className={selectedEstimate ? getStatusColor(selectedEstimate.status) : ''}>
+                  {selectedEstimate && getStatusText(selectedEstimate.status)}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-sm text-slate-600 mb-1">Общая сумма</p>
+                <p className="font-bold text-lg text-primary">
+                  {calculateTotal().toLocaleString('ru-RU')} ₽
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Позиции сметы</h3>
+                <Button variant="outline" size="sm" onClick={handleAddItem} className="gap-2">
+                  <Icon name="Plus" size={16} />
+                  Добавить позицию
+                </Button>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40%]">Наименование</TableHead>
+                    <TableHead>Тип</TableHead>
+                    <TableHead>Ед. изм.</TableHead>
+                    <TableHead className="text-right">Кол-во</TableHead>
+                    <TableHead className="text-right">Цена</TableHead>
+                    <TableHead className="text-right">Сумма</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {estimateItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <Input 
+                          value={item.name} 
+                          onChange={(e) => {
+                            setEstimateItems(estimateItems.map(i => 
+                              i.id === item.id ? {...i, name: e.target.value} : i
+                            ));
+                          }}
+                          className="border-0 focus-visible:ring-1"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Select 
+                          value={item.category}
+                          onValueChange={(value: 'work' | 'material') => {
+                            setEstimateItems(estimateItems.map(i => 
+                              i.id === item.id ? {...i, category: value} : i
+                            ));
+                          }}
+                        >
+                          <SelectTrigger className="w-[110px] border-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="work">Работа</SelectItem>
+                            <SelectItem value="material">Материал</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Input 
+                          value={item.unit} 
+                          onChange={(e) => {
+                            setEstimateItems(estimateItems.map(i => 
+                              i.id === item.id ? {...i, unit: e.target.value} : i
+                            ));
+                          }}
+                          className="w-20 border-0 focus-visible:ring-1"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input 
+                          type="number" 
+                          value={item.quantity} 
+                          onChange={(e) => {
+                            setEstimateItems(estimateItems.map(i => 
+                              i.id === item.id ? {...i, quantity: Number(e.target.value)} : i
+                            ));
+                          }}
+                          className="w-20 text-right border-0 focus-visible:ring-1"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Input 
+                          type="number" 
+                          value={item.price} 
+                          onChange={(e) => {
+                            setEstimateItems(estimateItems.map(i => 
+                              i.id === item.id ? {...i, price: Number(e.target.value)} : i
+                            ));
+                          }}
+                          className="w-24 text-right border-0 focus-visible:ring-1"
+                        />
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {(item.quantity * item.price).toLocaleString('ru-RU')} ₽
+                      </TableCell>
+                      <TableCell>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleRemoveItem(item.id)}
+                        >
+                          <Icon name="Trash2" size={16} className="text-red-500" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableRow className="bg-slate-50 font-bold">
+                    <TableCell colSpan={5} className="text-right">ИТОГО:</TableCell>
+                    <TableCell className="text-right text-lg">
+                      {calculateTotal().toLocaleString('ru-RU')} ₽
+                    </TableCell>
+                    <TableCell></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-4 border-t">
+              <Button variant="outline">
+                <Icon name="FileDown" size={18} className="mr-2" />
+                Экспорт в PDF
+              </Button>
+              <Button variant="outline">
+                <Icon name="FileCheck" size={18} className="mr-2" />
+                Создать акт
+              </Button>
+              <Button onClick={() => {
+                toast({
+                  title: "Смета сохранена",
+                  description: "Все изменения успешно применены",
+                });
+                setIsDetailDialogOpen(false);
+              }}>
+                <Icon name="Save" size={18} className="mr-2" />
+                Сохранить
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
